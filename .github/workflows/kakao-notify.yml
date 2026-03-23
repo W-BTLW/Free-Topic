@@ -1,0 +1,28 @@
+name: KakaoTalk Homework Bot
+on: [push]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refresh Kakao Token and Send Message
+        run: |
+          # 1. 리프레시 토큰을 사용하여 새로운 액세스 토큰 발급
+          RESPONSE=$(curl -s -X POST "https://kauth.kakao.com/oauth/token" \
+            -d "grant_type=refresh_token" \
+            -d "client_id=${{ secrets.KAKAO_CLIENT_ID }}" \
+            -d "refresh_token=${{ secrets.KAKAO_REFRESH_TOKEN }}")
+          
+          ACCESS_TOKEN=$(echo $RESPONSE | jq -r .access_token)
+
+          # 2. 나에게 메시지 보내기 실행
+          curl -v -X POST "https://kapi.kakao.com/v2/api/talk/memo/default/send" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -d "template_object={
+                  \"object_type\": \"text\",
+                  \"text\": \"🔔 숙제 알림\n${{ github.actor }}님이 [${{ github.event.repository.name }}]에 커밋했습니다!\n내용: ${{ github.event.head_commit.message }}\",
+                  \"link\": {
+                    \"web_url\": \"https://github.com/${{ github.repository }}\"
+                  },
+                  \"button_title\": \"커밋 확인하기\"
+                }"
